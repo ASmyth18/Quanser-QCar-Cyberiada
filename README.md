@@ -30,7 +30,7 @@ Two MATLAB instances are required.
 
 1. Open a second MATLAB instance
 2. Navigate to `student-competition-resources-matlab/Virtual_MATLAB_Resources/self_driving_stack_resources/`
-3. Link the MATLAB workspace to the Simulink models:
+3. Set up the car parameters:
    ```matlab
    Setup_QCar2_Params
    ```
@@ -39,8 +39,12 @@ Two MATLAB instances are required.
    ```matlab
    open_system('QCar2_Virtual_calibrate')
    ```
-5. Build and run via **Monitor & Tune** (QUARC tab) for **15-20 seconds**, then stop the model
-6. Run the params setup again (this time it will succeed):
+5. Link MATLAB and Simulink with the following command
+   ```matlab
+   system('"C:\Program Files\Quanser\QUARC\quarc_run.exe" -D -r -t tcpip://localhost:17000 "C:\Users\adams\Desktop\Qunaser_Main_Project\Quanser_Interactive_Labs_Resources-main\rtmodels\QCar2\QCar2_Workspace_studio.rt-win64" &');
+   ```
+6. Build and run via **Monitor & Tune** (QUARC tab) for **15-20 seconds**, then stop the model
+7. Run the params setup again (this time it will succeed):
    ```matlab
    Setup_QCar2_Params
    ```
