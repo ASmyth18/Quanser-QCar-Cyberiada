@@ -116,7 +116,7 @@ fprintf('Saved %d frames\n', i);
 If you decide to do multiple runs, you have to offset the frame numbering:
 
 ```matlab
-v = VideoReader('C:\Users\adams\Desktop\QQuanser-QCar-Cyberiada\training_data\camera_feed_run2.avi');
+v = VideoReader('C:\Users\adams\Desktop\Quanser-QCar-Cyberiada\training_data\camera_feed_run2.avi');
 % i continues from where the previous run ended
 while hasFrame(v)
     i = i + 1;
