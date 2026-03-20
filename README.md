@@ -55,7 +55,7 @@ Two MATLAB instances are required.
 
 1. Set up the competition workspace (loads the mission path):
    ```matlab
-   cd('C:\Users\adams\Desktop\Qunaser_Main_Project\competition_code')
+   cd('C:\Users\adams\Desktop\Quanser-QCar-Cyberiada\competition_code')
    setup_competition_workspace
    ```
 2. Open the main Simulink model:
