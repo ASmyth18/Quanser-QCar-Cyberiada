@@ -41,7 +41,7 @@ Two MATLAB instances are required.
    ```
 5. Link MATLAB and Simulink with the following command
    ```matlab
-   system('"C:\Program Files\Quanser\QUARC\quarc_run.exe" -D -r -t tcpip://localhost:17000 "C:\Users\adams\Desktop\Qunaser_Main_Project\Quanser_Interactive_Labs_Resources-main\rtmodels\QCar2\QCar2_Workspace_studio.rt-win64" &');
+   system('"C:\Program Files\Quanser\QUARC\quarc_run.exe" -D -r -t tcpip://localhost:17000 "C:\Users\adams\Desktop\Quanser-QCar-Cyberiada\Quanser_Interactive_Labs_Resources-main\rtmodels\QCar2\QCar2_Workspace_studio.rt-win64" &');
    ```
 6. Build and run via **Monitor & Tune** (QUARC tab) for **15-20 seconds**, then stop the model
 7. Run the params setup again (this time it will succeed):
