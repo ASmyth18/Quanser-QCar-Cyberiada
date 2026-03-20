@@ -1,0 +1,122 @@
+%implements "chartSource" "C"
+%function ChartConfig(block, system) void
+  %createrecord chartConfiguration { ...
+          executeAtInitialization  0 ...
+  }
+  %return chartConfiguration
+%endfunction
+%function ChartDataMap(block, system) void
+  %createrecord ChartDataElements {\
+    NumChartData   14 \
+    ChartDataDefaults {\
+      RecordType   "ChartData"\
+      Dimensions   []\
+      IsTestPoint  0\
+    }\
+    ChartData {\
+      Name         "sfEvent"\
+      Description  "ActiveChartEvent"\
+      SFName       ""\
+      Path         ""\
+      SrcLocation  ""\
+    }\
+    ChartData {\
+      Name         "doneDoubleBufferReInit"\
+      Description  "DoubleBufferInitCheck"\
+      SFName       ""\
+      Path         ""\
+      SrcLocation  ""\
+    }\
+    ChartData {\
+      Name         "X_hat"\
+      Description  "EmlPersistent"\
+      SFName       ""\
+      Path         ""\
+      SrcLocation  "VIRTUAL_self_driving_stack_v2:13734:150-155"\
+      Dimensions   [2]\
+    }\
+    ChartData {\
+      Name         "X_hat_not_empty"\
+      Description  "EmlPersistentSentinel"\
+      SFName       ""\
+      Path         ""\
+      SrcLocation  "VIRTUAL_self_driving_stack_v2:13734:150-155"\
+    }\
+    ChartData {\
+      Name         "P"\
+      Description  "EmlPersistent"\
+      SFName       ""\
+      Path         ""\
+      SrcLocation  "VIRTUAL_self_driving_stack_v2:13734:156-157"\
+      Dimensions   [2,2]\
+    }\
+    ChartData {\
+      Name         "P_not_empty"\
+      Description  "EmlPersistentSentinel"\
+      SFName       ""\
+      Path         ""\
+      SrcLocation  "VIRTUAL_self_driving_stack_v2:13734:156-157"\
+    }\
+    ChartData {\
+      Name         "I"\
+      Description  "EmlPersistent"\
+      SFName       ""\
+      Path         ""\
+      SrcLocation  "VIRTUAL_self_driving_stack_v2:13734:158-159"\
+      Dimensions   [2,2]\
+    }\
+    ChartData {\
+      Name         "I_not_empty"\
+      Description  "EmlPersistentSentinel"\
+      SFName       ""\
+      Path         ""\
+      SrcLocation  "VIRTUAL_self_driving_stack_v2:13734:158-159"\
+    }\
+    ChartData {\
+      Name         "A"\
+      Description  "EmlPersistent"\
+      SFName       ""\
+      Path         ""\
+      SrcLocation  "VIRTUAL_self_driving_stack_v2:13734:160-161"\
+      Dimensions   [2,2]\
+    }\
+    ChartData {\
+      Name         "A_not_empty"\
+      Description  "EmlPersistentSentinel"\
+      SFName       ""\
+      Path         ""\
+      SrcLocation  "VIRTUAL_self_driving_stack_v2:13734:160-161"\
+    }\
+    ChartData {\
+      Name         "B"\
+      Description  "EmlPersistent"\
+      SFName       ""\
+      Path         ""\
+      SrcLocation  "VIRTUAL_self_driving_stack_v2:13734:162-163"\
+      Dimensions   [2]\
+    }\
+    ChartData {\
+      Name         "B_not_empty"\
+      Description  "EmlPersistentSentinel"\
+      SFName       ""\
+      Path         ""\
+      SrcLocation  "VIRTUAL_self_driving_stack_v2:13734:162-163"\
+    }\
+    ChartData {\
+      Name         "C"\
+      Description  "EmlPersistent"\
+      SFName       ""\
+      Path         ""\
+      SrcLocation  "VIRTUAL_self_driving_stack_v2:13734:164-165"\
+      Dimensions   [1,2]\
+    }\
+    ChartData {\
+      Name         "C_not_empty"\
+      Description  "EmlPersistentSentinel"\
+      SFName       ""\
+      Path         ""\
+      SrcLocation  "VIRTUAL_self_driving_stack_v2:13734:164-165"\
+    }\
+  }
+  %return ChartDataElements
+%endfunction
