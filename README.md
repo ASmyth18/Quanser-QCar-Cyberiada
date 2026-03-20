@@ -237,11 +237,11 @@ cd('C:\Users\adams\Desktop\Quanser-QCar-Cyberiada\competition_code')
 train_yolo
 ```
 
-This script:
+The script:
 1. Loads the propagated ground truth
 2. Splits into 80% training / 20% validation
 3. Estimates anchor boxes via k-means on bounding box dimensions
-4. Creates a YOLOv4-tiny detector (pretrained on COCO, fine-tuned on your data)
+4. Creates a YOLOv4-tiny detector (pretrained on COCO, fine-tuned on the data you collect)
 5. Trains for 80 epochs with learning rate drops at epochs 30 and 60
 6. Saves `trained_yolo_detector.mat` and `yolo_net.mat` to `competition_code/`
 
