@@ -79,7 +79,7 @@ I haven't actually looked at the LEDs as they change, but it should be correct.
 
 ## Data Collection and YOLO Retraining
 
-If you need to retrain the detector (e.g., for the physical stage, to improve traffic light detection, or after environment changes), follow the full pipeline below.
+To retrain the detector (e.g., for the physical stage, to improve traffic light detection, or after environment changes), follow the steps below.
 
 ### Step 1 - Collect Camera Data
 
