@@ -152,7 +152,7 @@ Build and run via **Monitor & Tune** (QUARC tab). The car will:
 | Parameter | Value | Location |
 |-----------|-------|----------|
 | Cruise speed | 0.4 m/s | `setup_competition_workspace.m` |
-| QCar2 wheelbase | 0.256 m | Hardware spec |
+| QCar2 wheelbase | 0.256 m | ~ |
 | Waypoint tolerance | 0.35 m | `mission_fcn_v2.m` |
 | Stop/pickup dwell | 3.0 s | `mission_fcn_v2.m` |
 | Init delay | 10.0 s | `mission_fcn_v2.m` |
