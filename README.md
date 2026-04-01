@@ -1,6 +1,6 @@
 # Quanser Self-Driving Car Competition - QCar2
 
-Autonomous taxi system for the Quanser Self-Driving Car Student Competition. A 1/10-scale QCar2 completes a full taxi cycle (Hub to Pickup to Dropoff to Hub_ while obeying traffic lights, stop signs, yield signs, and roundabout rules.
+Autonomous taxi system for the Quanser Self-Driving Car Student Competition. A 1/10-scale QCar2 completes a full taxi cycle (Hub to Pickup to Dropoff to Hub) while obeying traffic lights, stop signs, yield signs, and roundabout rules.
 
 **Trinity College Dublin**
 
