@@ -1,278 +1,184 @@
+# Quanser Self-Driving Car Competition - QCar2
+
+Autonomous taxi system for the Quanser Self-Driving Car Student Competition. A 1/10-scale QCar2 completes a full taxi cycle (Hub to Pickup to Dropoff to Hub_ while obeying traffic lights, stop signs, yield signs, and roundabout rules.
+
+**Trinity College Dublin**
+
+## Architecture
+
+### Perception (Dual-Network)
+- **MobileNetV2** traffic light classifier (4 classes: none/red/yellow/green) — runs every frame at 30 fps
+- **YOLOv8-nano** road sign detector (stop/yield/roundabout) — runs on alternating frames for efficiency
+- Both networks exported as `dlnetwork` objects for QUARC code generation
+
+### Localisation
+- Extended Kalman Filter (EKF) fusing wheel odometry + LIDAR scan matching
+- State: `[x, y, heading]` relative to calibration origin at (0, 2.0) world coordinates
+
+### Planning
+- Choice of automatic or hand-tuned waypoint path (~406 points at 5 cm spacing) covering the full mission route
+- Curvature-based velocity profiling: Menger curvature at each waypoint sets a speed limit via `v <= sqrt(a_lat_max / kappa)`, with forward/backward acceleration smoothing passes
+- A* graph planner available for alternative routing
+
+### Control
+- **Lateral:** Pure Pursuit controller with look-ahead distance
+- **Longitudinal:** PID speed controller tracking the velocity profile (cruise 0.4 m/s)
+- Controller rate: 500 Hz
+
+### Mission FSM
+- 7-state machine: IDLE → NAV_PICKUP → AT_PICKUP → NAV_DROPOFF → AT_DROPOFF → NAV_HUB → COMPLETE
+- Proximity-gated traffic light response with heading gate (only reacts to lights ahead, not cross-traffic)
+- Red light latch with debounce, hard timeout, and cooldown to prevent re-latching
+- Stop sign detection requires both map proximity AND YOLOv8 confirmation
+- LIDAR-based obstacle avoidance with proportional slowdown
+
 ## Prerequisites
 
-- MATLAB R2025b (or compatible version)
-- Simulink
-- QUARC 2025 SP1 (with valid competition license)
+- MATLAB R2025b (or compatible)
+- Simulink + QUARC 2025 SP1
 - Quanser Interactive Labs (QLabs)
 - Deep Learning Toolbox
 - Computer Vision Toolbox
-- GPU Coder
-- MATLAB Coder Interface for Deep Learning Libraries (Add-On)
+- MATLAB Coder + GPU Coder
 - Visual Studio 2022 (for QUARC code generation)
 
-## How to Run (Virtual Stage)
+## Project Structure
+
+```
+competition_code/
+  setup_competition_workspace.m    # Loads path, velocity profile, workspace vars
+  extract_autonomous_data.m        # Post-run data extraction
+  manual_waypoint_editor.m         # Interactive path editing tool
+  create_title_card.m              # Video title card generator
+  generate_ml_feed.m               # Post-hoc ML detection overlay video
+  generate_bev_video.m             # Post-hoc bird's eye view video
+  replay_bev.m                     # 2D map replay animation
+  calibrate_bev.m                  # BEV homography calibration
+
+  simulink_blocks/                 # MATLAB Function blocks for Simulink
+    mission_fcn_v2.m               # Mission FSM (active)
+    perception_fcn_v5.m            # MobileNetV2 + YOLOv8 perception (active)
+    fcn_velocity_lookup.m          # Speed from velocity profile
+    fcn_pure_pursuit.m             # Pure pursuit lateral control
+    fcn_speed_pid.m                # PID longitudinal control
+    fcn_obstacle_detector.m        # LIDAR obstacle detection
+    fcn_look_ahead.m               # Path look-ahead generator
+    fcn_led_controller.m           # LED strip control
+
+  planning/                        # Path planning
+    waypoint_map.m                 # 37-node waypoint graph
+    astar_planner.m                # A* pathfinding
+    compute_velocity_profile.m     # Curvature-based speed limits
+    generate_mission_paths.m       # Mission route generation
+    load_manual_paths.m            # Manual path loader
+
+  perception/                      # Perception modules
+    detect_traffic_light.m         # HSV traffic light detection
+    detect_road_signs.m            # Road sign detection
+    detect_obstacles_lidar.m       # LIDAR processing
+    detect_lanes.m                 # Lane detection
+
+  mission/                         # Mission logic
+    mission_state_machine.m        # Legacy FSM
+    led_controller.m               # LED state mapper
+
+  control/                         # Control algorithms
+    pure_pursuit_controller.m      # Pure pursuit
+    pid_speed_controller.m         # PID speed
+    compute_desired_speed.m        # Speed computation
+
+  # Model weights (tracked via .gitignore whitelist)
+  yolo_net.mat                     # YOLOv4-tiny weights
+  yolo_anchors.mat                 # YOLO anchor boxes
+  trained_yolo_detector.mat        # Full detector object
+  lane_net.mat                     # Lane detection CNN
+  manual_path.mat                  # Mission waypoint path
+  bev_calibration.mat              # BEV homography data
+  angles_new_qcar2.mat             # LIDAR angle calibration
+  distance_new_qcar2.mat           # LIDAR distance calibration
+
+student-competition-resources-matlab/   # Official Quanser resources
+  Virtual_MATLAB_Resources/
+    self_driving_stack_resources/
+      Setup_Real_Scenario.m              # Instance 1: scene setup
+      Setup_QCar2_Params.m               # Instance 2: calibration params
+      QCar2_Virtual_calibrate.slx        # Calibration model
+      VIRTUAL_self_driving_stack_v2.slx  # Main Simulink model
+
+Quanser_Interactive_Labs_Resources-main/ # QLabs MATLAB/Python library
+```
+
+## How to Run
 
 Two MATLAB instances are required.
 
-### Instance 1 - Scene Setup
+### Instance 1 — Scene Setup
 
-1. Open MATLAB
-2. Navigate to `student-competition-resources-matlab/Virtual_MATLAB_Resources/self_driving_stack_resources/`
-3. Open Quanser Interactive Labs (QLabs) and select the **Plane** workspace
-4. Set `spawn_location = 1` in `Setup_Real_Scenario.m` (for calibration)
-5. Run:
-   ```matlab
-   Setup_Real_Scenario
-   ```
-6. The scene will load with roads, signs, traffic lights, and the QCar2
+1. Open MATLAB, navigate to `student-competition-resources-matlab/Virtual_MATLAB_Resources/self_driving_stack_resources/`
+2. Open QLabs and select the **Plane** workspace
+3. Set `spawn_location = 1` in `Setup_Real_Scenario.m`
+4. Run `Setup_Real_Scenario`
 
-### Instance 2 - Calibration (Required Before Every Session)
+### Instance 2 — Calibration (once per session)
 
-1. Open a second MATLAB instance
-2. Navigate to `student-competition-resources-matlab/Virtual_MATLAB_Resources/self_driving_stack_resources/`
-3. Set up the car parameters:
-   ```matlab
-   Setup_QCar2_Params
-   ```
-   **Note:** This will error if calibration hasn't been run yet. Fully to be expected, you can ignore it.
-4. Open the calibration model:
-   ```matlab
-   open_system('QCar2_Virtual_calibrate')
-   ```
-5. Link MATLAB and Simulink with the following command
-   ```matlab
-   system('"C:\Program Files\Quanser\QUARC\quarc_run.exe" -D -r -t tcpip://localhost:17000 "C:\Users\adams\Desktop\Quanser-QCar-Cyberiada\Quanser_Interactive_Labs_Resources-main\rtmodels\QCar2\QCar2_Workspace_studio.rt-win64" &');
-   ```
-6. Build and run via **Monitor & Tune** (QUARC tab) for **15-20 seconds**, then stop the model
-7. Run the params setup again (this time it will succeed):
-   ```matlab
-   Setup_QCar2_Params
-   ```
+1. Open a second MATLAB instance in the same resources directory
+2. Run `Setup_QCar2_Params` (will error on first run — expected)
+3. Open `QCar2_Virtual_calibrate`, build and run via **Monitor & Tune** for 15-20 seconds, then stop
+4. Run `Setup_QCar2_Params` again (succeeds now)
 
-### Instance 1 - Switch to Taxi Hub Spawn
+### Instance 1 — Respawn at Taxi Hub
 
-1. Back in Instance 1, stop `Setup_Real_Scenario` (Ctrl+C)
-2. Change `spawn_location = 2` in `Setup_Real_Scenario.m`
-3. Run `Setup_Real_Scenario` again - the car will respawn at the Taxi Hub
+1. Stop `Setup_Real_Scenario` (Ctrl+C)
+2. Change `spawn_location = 2`, re-run `Setup_Real_Scenario`
 
-### Instance 2 - Run the Self-Driving Stack
-
-1. Set up the competition workspace (loads the mission path):
-   ```matlab
-   cd('C:\Users\adams\Desktop\Quanser-QCar-Cyberiada\competition_code')
-   setup_competition_workspace
-   ```
-2. Open the main Simulink model:
-   ```matlab
-   open_system('VIRTUAL_self_driving_stack_v2')
-   ```
-3. Build and run via **Monitor & Tune** (QUARC tab)
-4. The car will:
-   - Wait ~10 seconds at the Taxi Hub (magenta LEDs)
-   - Navigate to Pickup at [0.125, 4.395] (green LEDs)
-   - Stop for 3 seconds at Pickup (blue LEDs)
-   - Navigate to Dropoff at [-0.905, 0.800] (blue LEDs)
-   - Stop for 3 seconds at Dropoff (orange LEDs)
-   - Return to Taxi Hub at [-1.205, -0.83] (magenta LEDs)
-   - Stop at Hub (complete)
-I haven't actually looked at the LEDs as they change, but it should be correct.
-
-## Data Collection and YOLO Retraining
-
-To retrain the detector (e.g., for the physical stage, to improve traffic light detection, or after environment changes), follow the steps below.
-
-### Step 1 - Collect Camera Data
-
-The Simulink model includes **To Host File** blocks that record the front CSI camera feed and pose data during a run.
-
-1. Complete the full setup (Instance 1 scene + Instance 2 calibration) as described in "How to Run" above
-2. Run the self-driving stack via **Monitor & Tune** and let it complete 2-3 full laps of the mission route
-3. Stop the model. Two files are saved:
-   - `training_data/camera_feed.avi` — front camera video
-   - `training_data/pose_data.mat` — car position/heading over time
-4. **Before running again**, rename the output files (the To Host File block cannot overwrite locked files):
-   ```matlab
-   movefile('training_data\camera_feed.avi', 'training_data\camera_feed_run1.avi');
-   movefile('training_data\pose_data.mat', 'training_data\pose_data_run1.mat');
-   ```
-5. Repeat steps 2-4 for additional runs if necessary
-
-### Step 2 - Extract Frames from Video
-
-Extract individual PNG frames from the recorded video:
+### Instance 2 — Run Self-Driving Stack
 
 ```matlab
-mkdir('C:\Users\adams\Desktop\Quanser-QCar-Cyberiada\training_data\frame');
-v = VideoReader('C:\Users\adams\Desktop\Quanser-QCar-Cyberiada\training_data\camera_feed.avi');
-i = 0;
-while hasFrame(v)
-    i = i + 1;
-    frame = readFrame(v);
-    imwrite(frame, sprintf('C:\\Users\\adams\\Desktop\\Quanser-QCar-Cyberiada\\training_data\\frame\\frame_%05d.png', i));
-end
-fprintf('Saved %d frames\n', i);
+cd('C:\Users\adams\Desktop\Quanser_Main_Project\competition_code')
+setup_competition_workspace
+open_system('VIRTUAL_self_driving_stack_v2')
 ```
 
-If you decide to do multiple runs, you have to offset the frame numbering:
+Build and run via **Monitor & Tune** (QUARC tab). The car will:
+- Wait ~10s at Hub (magenta LEDs)
+- Navigate to Pickup (green LEDs)
+- Stop 3s for passenger boarding (blue LEDs)
+- Navigate to Dropoff (blue LEDs)
+- Stop 3s for passenger exit (orange LEDs)
+- Return to Hub (magenta LEDs)
+
+## Key Parameters
+
+| Parameter | Value | Location |
+|-----------|-------|----------|
+| Cruise speed | 0.4 m/s | `setup_competition_workspace.m` |
+| QCar2 wheelbase | 0.256 m | Hardware spec |
+| Waypoint tolerance | 0.35 m | `mission_fcn_v2.m` |
+| Stop/pickup dwell | 3.0 s | `mission_fcn_v2.m` |
+| Init delay | 10.0 s | `mission_fcn_v2.m` |
+| Grace period | 15.0 s | `mission_fcn_v2.m` |
+| Red debounce | 3 frames | `mission_fcn_v2.m` |
+| Red timeout | 4.0 s | `mission_fcn_v2.m` |
+| Red cooldown | 8.0 s | `mission_fcn_v2.m` |
+| Stop sign wait | 2.5 s | `mission_fcn_v2.m` |
+| LIDAR stop dist | 0.3 m | `mission_fcn_v2.m` |
+| Intersection react | 1.0 m | `mission_fcn_v2.m` |
+
+## Post-Run Video Generation
+
+After a successful run, extract data and generate video feeds:
 
 ```matlab
-v = VideoReader('C:\Users\adams\Desktop\Quanser-QCar-Cyberiada\training_data\camera_feed_run2.avi');
-% i continues from where the previous run ended
-while hasFrame(v)
-    i = i + 1;
-    frame = readFrame(v);
-    imwrite(frame, sprintf('C:\\Users\\adams\\Desktop\\Quanser-QCar-Cyberiada\\training_data\\frame\\frame_%05d.png', i));
-end
-fprintf('Total frames: %d\n', i);
+extract_autonomous_data      % Creates run folder with frames + metadata
+generate_ml_feed             % ML detection overlay video
+generate_bev_video           % Bird's eye view transformation
+replay_bev                   % 2D map replay with trajectory
 ```
 
-### Step 3 - Auto-Label Stop Signs with Pretrained YOLO
+## Competition Info
 
-Use the COCO-pretrained YOLOv4-tiny to automatically detect stop signs across all frames:
-
-```matlab
-framesDir = 'C:\Users\adams\Desktop\Quanser-QCar-Cyberiada\training_data\frame';
-files = dir(fullfile(framesDir, '*.png'));
-detector = yolov4ObjectDetector('tiny-yolov4-coco');
-
-stopBoxes = cell(length(files), 1);
-for i = 1:length(files)
-    img = imread(fullfile(framesDir, files(i).name));
-    [bboxes, scores, labels] = detect(detector, img, 'Threshold', 0.3);
-    isStop = labels == 'stop sign';
-    if any(isStop)
-        stopBoxes{i} = bboxes(isStop, :);
-    else
-        stopBoxes{i} = zeros(0, 4);
-    end
-    if mod(i, 100) == 0
-        fprintf('Processed %d / %d\n', i, length(files));
-    end
-end
-save(fullfile(framesDir, '..', 'stop_sign_detections.mat'), 'stopBoxes', 'files');
-fprintf('Done. Found stop signs in %d frames\n', sum(cellfun(@(x) size(x,1) > 0, stopBoxes)));
-```
-
-This, unfortunately, is not the most accurate, and so you'll likely still have to manually label things.
-
-### Step 4 - Create Ground Truth with Pre-Filled Stop Signs
-
-Run the ground truth creation script to build an `imageLabeler`-compatible object with stop signs pre-labelled:
-
-```matlab
-cd('C:\Users\adams\Desktop\Quanser-QCar-Cyberiada\competition_code')
-create_ground_truth
-```
-
-This creates `training_data/gTruth_auto.mat` with 6 label classes:
-- `stop_sign` (pre-filled from Step 3)
-- `red_light` (empty - needs manual labelling)
-- `green_light` (empty - needs manual labelling)
-- `yellow_light` (empty - needs manual labelling)
-- `yield_sign` (empty - needs manual labelling)
-- `roundabout` (empty - needs manual labelling)
-
-### Step 5 - Manual Labelling (Keyframes Only)
-
-Open the ground truth in MATLAB's Image Labeller:
-
-```matlab
-load('C:\Users\adams\Desktop\Quanser-QCar-Cyberiada\training_data\gTruth_auto.mat');
-imageLabeler(gTruth)
-```
-
-You needn't label every frame:
-
-1. Pan through the frames and find ones where signs/lights are visible
-2. Draw **Rectangle** bounding boxes around each object, selecting the appropriate label class
-3. Label one **keyframe** every ~30-50 frames (wherever a sign or light is clearly visible)
-4. Focus on frames near intersections for traffic lights
-5. Review and correct the auto-labelled stop sign boxes
-6. When done, export the labels: **Export > To Workspace** as `gTruth`
-7. Save immediately:
-   ```matlab
-   save('C:\Users\adams\Desktop\Quanser-QCar-Cyberiada\training_data\gTruth_auto.mat', 'gTruth');
-   ```
-Make sure not to label the traffic light as a whole, but rather the individual light that is lit up. Also, make sure you're labelling with the correct label (i.e. don't label a red light as a yield sign).
-
-### Step 6 - Propagate Labels Between Keyframes
-
-The `propagate_labels.m` script uses KLT point tracking to automatically propagate bounding boxes from your manually labelled keyframes to all intermediate frames:
-
-```matlab
-cd('C:\Users\adams\Desktop\Quanser-QCar-Cyberiada\competition_code')
-propagate_labels
-```
-
-This reads `gTruth_auto.mat` and produces `gTruth_propagated.mat`. Review the result:
-
-```matlab
-load('C:\Users\adams\Desktop\Quanser-QCar-Cyberiada\training_data\gTruth_propagated.mat');
-imageLabeler(gTruth_propagated)
-```
-
-Scrub through and check:
-- Boxes that drifted off the object
-- Objects that appeared but weren't labelled (because no nearby keyframe)
-- False propagations where tracking jumped to a different object
-
-If corrections are needed:
-1. Fix labels in Image Labeller
-2. Export to workspace as `gTruth`
-3. Save over the auto file:
-   ```matlab
-   save('C:\Users\adams\Desktop\Quanser-QCar-Cyberiada\training_data\gTruth_auto.mat', 'gTruth');
-   ```
-4. Run `propagate_labels` again
-5. Repeat until everything or close to everything is correctly labelled
-
-### Step 7 - Train YOLOv4-tiny
-
-You needn't do this, Anna, just upload the training data to GitHub, and I'll train it, as this is very dependent on your pc specs (though I'll give the process anyway).
-
-Once labelling is complete, train the detector:
-
-```matlab
-cd('C:\Users\adams\Desktop\Quanser-QCar-Cyberiada\competition_code')
-train_yolo
-```
-
-The script:
-1. Loads the propagated ground truth
-2. Splits into 80% training / 20% validation
-3. Estimates anchor boxes via k-means on bounding box dimensions
-4. Creates a YOLOv4-tiny detector (pretrained on COCO, fine-tuned on the data you collect)
-5. Trains for 80 epochs with learning rate drops at epochs 30 and 60
-6. Saves `trained_yolo_detector.mat` and `yolo_net.mat` to `competition_code/`
-
-Training takes approximately **22 minutes** on an RTX 3070. Expected final loss values:
-- Training loss: < 0.5
-- Validation loss: < 2.5
-
-Checkpoints are saved to `training_data/checkpoints/` in case training is interrupted.
-
-### Step 8 - Verify the Trained Detector
-
-Test the detector on sample frames:
-
-```matlab
-load('competition_code\trained_yolo_detector.mat');
-img = imread('training_data\frame\frame_00500.png');
-[bboxes, scores, labels] = detect(trainedDetector, img, 'Threshold', 0.4);
-detImg = insertObjectAnnotation(img, 'rectangle', bboxes, cellstr(labels) + " " + string(round(scores, 2)));
-imshow(detImg);
-```
-
-### Step 9 - Extract Network for Simulink
-
-After training, extract the network and anchor boxes for use in the Simulink MATLAB Function block:
-
-```matlab
-load('competition_code\trained_yolo_detector.mat');
-net = trainedDetector.Network;
-anchorBoxes = trainedDetector.AnchorBoxes;
-save('competition_code\yolo_net.mat', 'net');
-save('competition_code\yolo_anchors.mat', 'anchorBoxes');
-```
-
-The `perception_fcn` MATLAB Function block in the Simulink model loads `yolo_net.mat` via `coder.loadDeepLearningNetwork` and performs inference at runtime. No further changes to the Simulink model are needed after retraining -- simply replace the `.mat` files and rebuild.
+- **Competition:** Quanser Self-Driving Car Student Competition
+- **Team:** Trinity College Dublin
+- **Stage:** Virtual (April 2026)
+- **Submission:** GitHub repository + 3-minute YouTube video
+- **Constraint:** MATLAB/Simulink only; QUARC real-time models for vehicle interface
