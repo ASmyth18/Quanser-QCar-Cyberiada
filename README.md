@@ -178,7 +178,11 @@ replay_bev                   % 2D map replay with trajectory
 ## Competition Info
 
 - **Competition:** Quanser Self-Driving Car Student Competition
-- **Team:** Trinity College Dublin
-- **Stage:** Virtual (April 2026)
+- **Team:** Cyberiada || Trinity College Dublin
+- **Stage:** Virtual
 - **Submission:** GitHub repository + 3-minute YouTube video
 - **Constraint:** MATLAB/Simulink only; QUARC real-time models for vehicle interface
+
+  ## YouTube Submission
+
+  https://youtu.be/GGDwSdpLt-c
